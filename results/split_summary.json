@@ -1,0 +1,25 @@
+{
+  "n_images": 27558,
+  "n_patients": 200,
+  "image_size": 96,
+  "splits": {
+    "train": {
+      "patients": 140,
+      "images": 19398,
+      "parasitized": 9722,
+      "uninfected": 9676
+    },
+    "val": {
+      "patients": 20,
+      "images": 3164,
+      "parasitized": 1801,
+      "uninfected": 1363
+    },
+    "test": {
+      "patients": 40,
+      "images": 4996,
+      "parasitized": 2256,
+      "uninfected": 2740
+    }
+  }
+}
