@@ -25,6 +25,35 @@ QUEUE = [
 ]
 
 
+def make_figure():
+    m = json.loads((ROOT / "results" / "metrics.json").read_text())
+    s = np.load(ROOT / "results" / "test_scores.npz")
+    fpr, tpr, _ = roc_curve(s["y"], s["p"])
+    plt.rcParams.update({"font.family": "sans-serif", "font.size": 10, "axes.edgecolor": "#c9c1b8", "axes.labelcolor": "#3a3532",
+                         "xtick.color": "#6b6460", "ytick.color": "#6b6460", "axes.titleweight": "bold", "axes.titlesize": 11})
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4), facecolor="white")
+    ax[0].plot(fpr, tpr, color="#b4232a", lw=2.2)
+    ax[0].plot([0, 1], [0, 1], ls=":", color="#b8b0a8")
+    for sp in ["top", "right"]:
+        ax[0].spines[sp].set_visible(False)
+    ax[0].grid(color="#f1ece6")
+    ax[0].set(xlabel="False positive rate", ylabel="Sensitivity", title=f"ROC on 40 held-out patients · AUC {m['test']['auc']:.3f}")
+    cm = m["test"]["at_0.5"]["confusion_matrix"]
+    mat = np.array([[cm["tn"], cm["fp"]], [cm["fn"], cm["tp"]]])
+    good = np.array([[1, 0], [0, 1]])
+    colors = np.where(good[..., None] == 1, np.array([0.18, 0.49, 0.31]), np.array([0.71, 0.14, 0.16]))
+    alpha = 0.12 + 0.6 * mat / mat.max()
+    ax[1].imshow(np.concatenate([colors, alpha[..., None]], -1))
+    for (r, c), v in np.ndenumerate(mat):
+        ax[1].text(c, r, f"{v:,}", ha="center", va="center", fontsize=15, fontweight="bold", color="#1c1917")
+    for sp in ax[1].spines.values():
+        sp.set_visible(False)
+    ax[1].set(xticks=[0, 1], yticks=[0, 1], xticklabels=["uninfected", "parasitized"], yticklabels=["uninfected", "parasitized"],
+              xlabel="Model says", ylabel="Truth", title="Confusion matrix · threshold 0.5")
+    fig.tight_layout()
+    fig.savefig(ASSETS / "metrics.png", dpi=150)
+
+
 def main():
     d = np.load(ROOT / "data" / "cells_96.npz")
     X, y, split, names = d["X"], d["y"], d["split"], d["names"]
@@ -62,23 +91,7 @@ def main():
         for k, i in enumerate(rng.choice(te[y[te] == lab], 2, replace=False)):
             Image.fromarray(X[i]).save(ASSETS / "cells" / f"test_{nm}_{k}.png")
 
-    # metrics figures
-    m = json.loads((ROOT / "results" / "metrics.json").read_text())
-    s = np.load(ROOT / "results" / "test_scores.npz")
-    fpr, tpr, _ = roc_curve(s["y"], s["p"])
-    fig, ax = plt.subplots(1, 2, figsize=(9, 3.8))
-    ax[0].plot(fpr, tpr, color="#b4232a", lw=2)
-    ax[0].plot([0, 1], [0, 1], ls=":", color="#888")
-    ax[0].set(xlabel="False positive rate", ylabel="Sensitivity", title=f"ROC, held-out patients (AUC {m['test']['auc']:.3f})")
-    cm = m["test"]["at_0.5"]["confusion_matrix"]
-    mat = np.array([[cm["tn"], cm["fp"]], [cm["fn"], cm["tp"]]])
-    ax[1].imshow(mat, cmap="Reds")
-    for (r, c), v in np.ndenumerate(mat):
-        ax[1].text(c, r, str(v), ha="center", va="center", fontsize=13, color="white" if v > mat.max() / 2 else "black")
-    ax[1].set(xticks=[0, 1], yticks=[0, 1], xticklabels=["uninfected", "parasitized"], yticklabels=["uninfected", "parasitized"],
-              xlabel="Predicted", ylabel="True", title="Confusion matrix (threshold 0.5)")
-    fig.tight_layout()
-    fig.savefig(ASSETS / "metrics.png", dpi=130)
+    make_figure()
     print("assets written", meta)
 
 

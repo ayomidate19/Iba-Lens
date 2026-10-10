@@ -46,7 +46,15 @@ Medical laboratory scientists in Nigerian hospital and primary-care labs who rea
 4. **Triages the cell, then the slide.** Two thresholds frozen on validation patients split cells into *likely positive*, *unclear* and *likely negative*. A slide's band comes from its counts, using slide thresholds calibrated on validation slides. Parasitemia is estimated with the false-positive rate subtracted.
 ![Slide review with Grad-CAM evidence](docs/slide_review.png)
 
-5. **Keeps the human in charge.** The queue is ordered by band and parasitemia. The scientist confirms positive, confirms negative or asks for a repeat smear, and the slide leaves the review list.
+5. **Keeps the human in charge.** The queue is ordered by band and parasitemia. The scientist confirms positive, confirms negative or asks for a repeat smear; the slide drops out of the review list and the next most urgent one opens.
+
+## Screens
+
+| Analyse a single cell | Accuracy page | Phone |
+|---|---|---|
+| ![Analyse](docs/analyse.png) | ![Accuracy](docs/metrics_tab.png) | ![Mobile](docs/mobile.png) |
+
+Design notes are in [design.md](design.md): a light "lab report" look, one accent colour, status colours only for triage, and the safety line always visible.
 
 ## Architecture
 
