@@ -1,0 +1,28 @@
+{
+ "gradcam": {
+  "n": 100,
+  "pointing_game_hit": 0.88,
+  "peak_in_cell": 0.88,
+  "pct_mass_in_cell": 0.8318223065137863,
+  "overlap_top10": 0.6169623325105728
+ },
+ "occlusion": {
+  "n": 100,
+  "pointing_game_hit": 0.81,
+  "peak_in_cell": 0.8,
+  "pct_mass_in_cell": 0.8739656697513059,
+  "overlap_top10": 0.5994034707158351
+ },
+ "random": {
+  "n": 100,
+  "pointing_game_hit": 0.22
+ },
+ "center": {
+  "n": 100,
+  "pointing_game_hit": 0.18
+ },
+ "proxy_area_fraction_of_cell_mean": 0.054850359624354944,
+ "dilated_proxy_note": "proxy=darkest 5% green-channel pixels inside eroded cell mask, dilated 6px; random in-cell point is the chance level",
+ "gradcam_blank_maps": 0,
+ "gradcam_vs_occlusion_pearson_mean": 0.8046837473996795
+}

@@ -8,3 +8,9 @@ hackathon/
 flagged/
 .gradio/
 .claude/
+node_modules/
+audit/scratch/
+.pytest_cache/
+# large model/data files (>50 MB)
+data/cells_96.npz
+data/cell_images.zip

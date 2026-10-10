@@ -1,0 +1,212 @@
+{
+ "by_level": {
+  "0%": {
+   "n": 40,
+   "likely positive": 0,
+   "unclear": 40,
+   "likely negative": 0,
+   "strict_pos_rate": 0.0,
+   "mean_true": 0.0,
+   "mean_est": 0.46937500000000004,
+   "mean_flagged_pos": 0.8,
+   "mean_flagged_unc": 7.025,
+   "flagged_pos_dist": [
+    17,
+    14,
+    9
+   ],
+   "pos_plus_unc_min_med_max": [
+    3,
+    8.0,
+    15
+   ]
+  },
+  "1%": {
+   "n": 40,
+   "likely positive": 6,
+   "unclear": 31,
+   "likely negative": 3,
+   "strict_pos_rate": 0.15,
+   "mean_true": 1.0,
+   "mean_est": 0.975,
+   "mean_flagged_pos": 1.55,
+   "mean_flagged_unc": 7.075,
+   "flagged_pos_dist": [
+    0,
+    24,
+    10,
+    6
+   ],
+   "pos_plus_unc_min_med_max": [
+    2,
+    7.0,
+    26
+   ]
+  },
+  "2%": {
+   "n": 40,
+   "likely positive": 14,
+   "unclear": 24,
+   "likely negative": 2,
+   "strict_pos_rate": 0.35,
+   "mean_true": 2.0,
+   "mean_est": 1.8037500000000002,
+   "mean_flagged_pos": 2.35,
+   "mean_flagged_unc": 7.05,
+   "flagged_pos_dist": [
+    2,
+    2,
+    22,
+    10,
+    3,
+    0,
+    1
+   ],
+   "pos_plus_unc_min_med_max": [
+    2,
+    9.0,
+    25
+   ]
+  },
+  "5%": {
+   "n": 40,
+   "likely positive": 38,
+   "unclear": 2,
+   "likely negative": 0,
+   "strict_pos_rate": 0.95,
+   "mean_true": 5.0,
+   "mean_est": 4.625,
+   "mean_flagged_pos": 5.2,
+   "mean_flagged_unc": 6.85,
+   "flagged_pos_dist": [
+    0,
+    1,
+    1,
+    2,
+    4,
+    16,
+    10,
+    5,
+    1
+   ],
+   "pos_plus_unc_min_med_max": [
+    4,
+    12.0,
+    26
+   ]
+  },
+  "10%": {
+   "n": 40,
+   "likely positive": 40,
+   "unclear": 0,
+   "likely negative": 0,
+   "strict_pos_rate": 1.0,
+   "mean_true": 10.0,
+   "mean_est": 9.102272727272728,
+   "mean_flagged_pos": 9.675,
+   "mean_flagged_unc": 6.55,
+   "flagged_pos_dist": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    3,
+    0,
+    1,
+    6,
+    17,
+    10,
+    2
+   ],
+   "pos_plus_unc_min_med_max": [
+    7,
+    16.0,
+    29
+   ]
+  },
+  "20%": {
+   "n": 40,
+   "likely positive": 40,
+   "unclear": 0,
+   "likely negative": 0,
+   "strict_pos_rate": 1.0,
+   "mean_true": 20.0,
+   "mean_est": 17.8,
+   "mean_flagged_pos": 18.375,
+   "mean_flagged_unc": 6.775,
+   "flagged_pos_dist": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    2,
+    3,
+    0,
+    2,
+    13,
+    10,
+    6,
+    1
+   ],
+   "pos_plus_unc_min_med_max": [
+    12,
+    25.0,
+    37
+   ]
+  }
+ },
+ "strict_sensitivity_likely_positive_all_infected": 0.69,
+ "strict_sens_levels_le_2pct": 0.25,
+ "not_negative_sens_levels_le_2pct": 0.9375,
+ "k": [
+  3,
+  2,
+  0.00575
+ ],
+ "identical_to_stored_slide_metrics": true,
+ "uninfected_cells_from_healthy_patients": {
+  "n": 744,
+  "frac_pos": 0.010752688172043012,
+  "frac_unc": 0.026881720430107527,
+  "frac_neg": 0.9623655913978495
+ },
+ "uninfected_cells_from_infected_patients": {
+  "n": 1996,
+  "frac_pos": 0.009519038076152305,
+  "frac_unc": 0.09769539078156313,
+  "frac_neg": 0.8927855711422845
+ },
+ "sim_0pct_100cells_pooled_all_test_neg": {
+  "unclear": 0.915,
+  "likely positive": 0.0805,
+  "likely negative": 0.0045
+ },
+ "sim_0pct_100cells_healthy_patients_only": {
+  "likely negative": 0.254,
+  "unclear": 0.675,
+  "likely positive": 0.071
+ },
+ "sim_0pct_100cells_infected_patients_neg_only": {
+  "unclear": 0.9345,
+  "likely positive": 0.063,
+  "likely negative": 0.0025
+ },
+ "sim_0pct_60cells_healthy_only": {
+  "likely positive": 0.016,
+  "likely negative": 0.619,
+  "unclear": 0.365
+ }
+}

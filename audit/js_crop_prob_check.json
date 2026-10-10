@@ -1,0 +1,66 @@
+{
+ "LAB-0412": {
+  "n": 60,
+  "max_prob_diff": 0.0077962204813957214,
+  "band_js_pipeline": "likely negative",
+  "band_ref": "likely negative",
+  "pos_js": 0,
+  "pos_ref": 0
+ },
+ "LAB-0413": {
+  "n": 100,
+  "max_prob_diff": 4.842877388000488e-05,
+  "band_js_pipeline": "likely positive",
+  "band_ref": "likely positive",
+  "pos_js": 8,
+  "pos_ref": 8
+ },
+ "LAB-0414": {
+  "n": 60,
+  "max_prob_diff": 1.4007091522216797e-06,
+  "band_js_pipeline": "likely negative",
+  "band_ref": "likely negative",
+  "pos_js": 0,
+  "pos_ref": 0
+ },
+ "LAB-0415": {
+  "n": 100,
+  "max_prob_diff": 1.0029412806034088e-05,
+  "band_js_pipeline": "likely positive",
+  "band_ref": "likely positive",
+  "pos_js": 3,
+  "pos_ref": 3
+ },
+ "LAB-0416": {
+  "n": 100,
+  "max_prob_diff": 3.7906691431999207e-05,
+  "band_js_pipeline": "likely positive",
+  "band_ref": "likely positive",
+  "pos_js": 20,
+  "pos_ref": 20
+ },
+ "LAB-0417": {
+  "n": 60,
+  "max_prob_diff": 2.5704503059387207e-07,
+  "band_js_pipeline": "likely negative",
+  "band_ref": "likely negative",
+  "pos_js": 0,
+  "pos_ref": 0
+ },
+ "LAB-0418": {
+  "n": 100,
+  "max_prob_diff": 1.7819926142692566e-05,
+  "band_js_pipeline": "unclear",
+  "band_ref": "unclear",
+  "pos_js": 0,
+  "pos_ref": 0
+ },
+ "LAB-0419": {
+  "n": 100,
+  "max_prob_diff": 9.747687727212906e-06,
+  "band_js_pipeline": "likely positive",
+  "band_ref": "likely positive",
+  "pos_js": 4,
+  "pos_ref": 4
+ }
+}
