@@ -1,0 +1,50 @@
+[
+  {
+    "id": "LAB-0412",
+    "source_patient": "C201",
+    "cells": 60,
+    "true_parasitized": 0
+  },
+  {
+    "id": "LAB-0413",
+    "source_patient": "C128",
+    "cells": 100,
+    "true_parasitized": 8
+  },
+  {
+    "id": "LAB-0414",
+    "source_patient": "C205",
+    "cells": 60,
+    "true_parasitized": 0
+  },
+  {
+    "id": "LAB-0415",
+    "source_patient": "C130",
+    "cells": 100,
+    "true_parasitized": 2
+  },
+  {
+    "id": "LAB-0416",
+    "source_patient": "C149",
+    "cells": 100,
+    "true_parasitized": 20
+  },
+  {
+    "id": "LAB-0417",
+    "source_patient": "C216",
+    "cells": 60,
+    "true_parasitized": 0
+  },
+  {
+    "id": "LAB-0418",
+    "source_patient": "C166",
+    "cells": 100,
+    "true_parasitized": 1
+  },
+  {
+    "id": "LAB-0419",
+    "source_patient": "C179",
+    "cells": 100,
+    "true_parasitized": 4
+  }
+]

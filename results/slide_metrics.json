@@ -1,0 +1,72 @@
+{
+  "setup": "40 simulated 100-cell fields per level from held-out patients' real cells; full image pipeline",
+  "slide_thresholds": {
+    "k_pos": 3,
+    "k_neg": 2
+  },
+  "by_level": {
+    "0%": {
+      "slides": 40,
+      "likely_positive": 0,
+      "unclear": 40,
+      "likely_negative": 0,
+      "cells_found_mean": 100.0,
+      "true_pct_mean": 0.0,
+      "est_pct_mean": 0.46937500000000004,
+      "abs_err_mean": 0.46937500000000004
+    },
+    "1%": {
+      "slides": 40,
+      "likely_positive": 6,
+      "unclear": 31,
+      "likely_negative": 3,
+      "cells_found_mean": 100.0,
+      "true_pct_mean": 1.0,
+      "est_pct_mean": 0.975,
+      "abs_err_mean": 0.665
+    },
+    "2%": {
+      "slides": 40,
+      "likely_positive": 14,
+      "unclear": 24,
+      "likely_negative": 2,
+      "cells_found_mean": 100.0,
+      "true_pct_mean": 2.0,
+      "est_pct_mean": 1.8037500000000002,
+      "abs_err_mean": 0.7937500000000002
+    },
+    "5%": {
+      "slides": 40,
+      "likely_positive": 38,
+      "unclear": 2,
+      "likely_negative": 0,
+      "cells_found_mean": 100.0,
+      "true_pct_mean": 5.0,
+      "est_pct_mean": 4.625,
+      "abs_err_mean": 1.0649999999999995
+    },
+    "10%": {
+      "slides": 40,
+      "likely_positive": 40,
+      "unclear": 0,
+      "likely_negative": 0,
+      "cells_found_mean": 99.975,
+      "true_pct_mean": 10.0,
+      "est_pct_mean": 9.102272727272728,
+      "abs_err_mean": 1.2527272727272722
+    },
+    "20%": {
+      "slides": 40,
+      "likely_positive": 40,
+      "unclear": 0,
+      "likely_negative": 0,
+      "cells_found_mean": 100.0,
+      "true_pct_mean": 20.0,
+      "est_pct_mean": 17.8,
+      "abs_err_mean": 2.398749999999999
+    }
+  },
+  "slide_sensitivity_not_negative": 0.975,
+  "slide_specificity_0pct_not_positive": 1.0,
+  "parasitemia_mae_pct_points": 1.1074337121212117
+}

@@ -7,3 +7,4 @@ hackathon/
 .env
 flagged/
 .gradio/
+.claude/

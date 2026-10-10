@@ -1,5 +1,5 @@
-"""Fine-tune an ImageNet MobileNetV2 on malaria cells, calibrate triage thresholds
-on the validation patients, and report metrics on held-out test patients."""
+"""Fine-tune an ImageNet MobileNetV2 on malaria cells, keep the
+checkpoint with the best validation-patient AUC. Thresholds and test metrics: calibrate.py."""
 import json
 import time
 from pathlib import Path
@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score
 from torchvision import models
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,20 +53,6 @@ def predict(model, X):
     return torch.cat(out).numpy()
 
 
-def metrics_at(y, p, t):
-    pred = (p >= t).astype(int)
-    tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
-    return {
-        "threshold": float(t),
-        "sensitivity": tp / (tp + fn),
-        "specificity": tn / (tn + fp),
-        "ppv": tp / max(tp + fp, 1),
-        "npv": tn / max(tn + fn, 1),
-        "accuracy": (tp + tn) / len(y),
-        "confusion_matrix": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
-    }
-
-
 def main():
     d = np.load(ROOT / "data" / "cells_96.npz")
     X, y, split = d["X"], d["y"], d["split"]
@@ -105,55 +91,11 @@ def main():
             best_auc = auc
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
-    model.load_state_dict(best_state)
-    pva = predict(model, Xva)
-    pte = predict(model, Xte)
-
-    # Triage thresholds, chosen on validation patients only:
-    #   t_low  : highest threshold that keeps validation sensitivity >= 98% -> below = "likely negative"
-    #   t_high : lowest threshold that keeps validation specificity >= 98% -> above = "likely positive"
-    fpr, tpr, thr = roc_curve(yva, pva)
-    ok_low = thr[tpr >= 0.98]
-    t_low = float(ok_low.max()) if len(ok_low) else 0.5
-    ok_high = thr[(1 - fpr) >= 0.98]
-    t_high = float(ok_high.min()) if len(ok_high) else 0.5
-    t_high = max(t_high, t_low)
-
-    band = np.where(pte >= t_high, "likely_positive", np.where(pte < t_low, "likely_negative", "unclear"))
-    triage = {}
-    for b in ["likely_positive", "unclear", "likely_negative"]:
-        m = band == b
-        triage[b] = {
-            "cells": int(m.sum()),
-            "share": float(m.mean()),
-            "truly_parasitized": int(yte[m].sum()),
-            "truly_uninfected": int((1 - yte[m]).sum()),
-        }
-
-    results = {
-        "model": "MobileNetV2 (ImageNet-pretrained), fine-tuned, 96x96 input",
-        "epochs": EPOCHS,
-        "device": str(DEV),
-        "history": history,
-        "val_auc": float(roc_auc_score(yva, pva)),
-        "test": {
-            "n_cells": int(len(yte)),
-            "n_patients": 40,
-            "auc": float(roc_auc_score(yte, pte)),
-            "at_0.5": metrics_at(yte, pte, 0.5),
-            "at_t_low": metrics_at(yte, pte, t_low),
-            "at_t_high": metrics_at(yte, pte, t_high),
-        },
-        "thresholds": {"t_low": t_low, "t_high": t_high},
-        "triage_on_test": triage,
-    }
     (ROOT / "models").mkdir(exist_ok=True)
     torch.save(best_state, ROOT / "models" / "malaria_mobilenetv2_96.pt")
-    (ROOT / "models" / "thresholds.json").write_text(json.dumps(results["thresholds"], indent=2))
-    (ROOT / "results" / "metrics.json").write_text(json.dumps(results, indent=2, default=float))
-    np.savez(ROOT / "results" / "test_scores.npz", y=yte, p=pte)
-    print(json.dumps(results["test"], indent=2, default=float))
-    print(json.dumps(triage, indent=2))
+    (ROOT / "results").mkdir(exist_ok=True)
+    (ROOT / "results" / "train_history.json").write_text(json.dumps({"epochs": EPOCHS, "device": str(DEV), "history": history}, indent=2, default=float))
+    print("saved best checkpoint (val AUC %.4f); now run calibrate.py" % best_auc)
 
 
 if __name__ == "__main__":

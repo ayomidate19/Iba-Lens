@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
+from scipy import ndimage as ndi
 from skimage import filters, measure, morphology
 
 from train import MEAN, STD, build_model
@@ -118,8 +119,8 @@ def segment(field: np.ndarray, min_area=900, max_area=40000):
     # also treat pure black (cell-image padding) as background
     t = filters.threshold_otsu(gray[gray > 10]) if (gray > 10).any() else 128
     mask = (gray < t) & (gray > 10)
-    mask = morphology.binary_opening(mask, morphology.disk(2))
-    mask = morphology.remove_small_holes(mask, 2000)
+    mask = ndi.binary_opening(mask, structure=morphology.disk(2))
+    mask = ndi.binary_fill_holes(mask)
     labels = measure.label(mask)
     cells = []
     for r in measure.regionprops(labels):
