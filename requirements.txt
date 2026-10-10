@@ -1,0 +1,9 @@
+torch>=2.5
+torchvision>=0.20
+gradio>=5.0
+numpy
+pillow
+scipy
+scikit-image
+scikit-learn
+matplotlib
