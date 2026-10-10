@@ -2,6 +2,7 @@ torch>=2.5
 torchvision>=0.20
 gradio>=5.0
 numpy
+pandas
 pillow
 scipy
 scikit-image
