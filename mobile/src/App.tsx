@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { analyse, type Analysis, type Cell } from './analyse'
 import type { Band } from './lib/model'
 import { Screen, Segmented, Stack, useNav } from './nav'
@@ -8,6 +8,16 @@ import './App.css'
 const base = import.meta.env.BASE_URL
 const DEMO_IDS = ['LAB-0412', 'LAB-0413', 'LAB-0414', 'LAB-0415', 'LAB-0416', 'LAB-0417', 'LAB-0418', 'LAB-0419']
 type Tab = 'slides' | 'scan' | 'model'
+
+/* Scientist's sign-off per slide. In-memory; the tool never decides, the human does. */
+type Verdict = 'positive' | 'negative' | 'repeat'
+const VERDICT_LABEL: Record<Verdict, string> = { positive: 'Confirmed positive', negative: 'Confirmed negative', repeat: 'Repeat smear' }
+const reviews = new Map<string, Verdict>()
+const subs = new Set<() => void>()
+let snap = 0
+const setReview = (id: string, v: Verdict | null) => { if (v) reviews.set(id, v); else reviews.delete(id); snap++; subs.forEach((f) => f()) }
+const useReviews = () => { useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f) } }, () => snap); return reviews }
+const MIN_CELLS = 20
 
 /* ───────── Slide flow: queue → detail → field / flagged cells → evidence sheet ───────── */
 
@@ -23,7 +33,7 @@ function FieldScreen({ a }: { a: Analysis }) {
           ))}
         </svg>
       </div>
-      <div className="legend"><span><i className="dot pos" />Positive</span><span><i className="dot unc" />Unclear</span></div>
+      <div className="legend"><span><i className="dot pos" />Looks infected</span><span><i className="dot unc" />Unclear</span></div>
       <p className="group-footer">Tap a boxed cell to see the evidence.</p>
       {sel && <CellSheet cell={sel} onClose={() => setSel(null)} />}
     </Screen>
@@ -57,18 +67,28 @@ function FlaggedScreen({ a }: { a: Analysis }) {
 function SlideDetail({ a }: { a: Analysis }) {
   const { push } = useNav()
   const s = a.summary
+  const rv = useReviews().get(a.id)
+  const few = s.cells < MIN_CELLS
   return (
     <Screen title={a.name}>
       <div className="card hero">
         <Chip band={s.band} />
         <div className="big-num">{pct(s.parasitemia_pct)}</div>
-        <div className="caption">Estimated parasitemia · {s.cells} cells scanned</div>
+        <div className="caption">Red cells that look infected · {s.cells} cells read</div>
       </div>
+      {few && <p className="notice" role="alert">Only {s.cells} cells could be read. That is too few to clear this slide. Retake the photo closer, with the smear filling the frame, or read it by eye.</p>}
       <div className="stat-row">
-        <Stat value={String(s.flagged_positive)} label="Positive" tone="pos" />
+        <Stat value={String(s.flagged_positive)} label="Look infected" tone="pos" />
         <Stat value={String(s.flagged_unclear)} label="Unclear" tone="unc" />
-        <Stat value={pct(s.parasitemia_upper_pct)} label="Upper est." />
+        <Stat value={pct(s.parasitemia_upper_pct)} label="Worst case" />
       </div>
+      <Group header="Scientist sign-off" footer={rv ? 'Saved on this phone. Tap again to undo.' : 'Iba Lens never decides. Record your reading.'}>
+        <div className="signoff">
+          {(['positive', 'negative', 'repeat'] as Verdict[]).map((v) => (
+            <button key={v} className={`vbtn ${v}${rv === v ? ' on' : ''}`} onClick={() => setReview(a.id, rv === v ? null : v)}>{VERDICT_LABEL[v]}</button>
+          ))}
+        </div>
+      </Group>
       <Group header="Review">
         <button className="row tap" onClick={() => push('Field', <FieldScreen a={a} />)}>
           <img className="thumb" src={a.url} alt="" />
@@ -87,18 +107,19 @@ function SlideDetail({ a }: { a: Analysis }) {
 const order: Record<Band, number> = { 'likely positive': 0, unclear: 1, 'likely negative': 2 }
 function SlidesRoot({ items }: { items: Analysis[] }) {
   const { push } = useNav()
+  const rv = useReviews()
   const [f, setF] = useState<'all' | Band>('all')
   const demo = items.filter((i) => i.source === 'demo')
   const pending = DEMO_IDS.length - demo.length
-  const sorted = [...demo].sort((a, b) => order[a.summary.band] - order[b.summary.band] || b.summary.max_prob - a.summary.max_prob).filter((a) => f === 'all' || a.summary.band === f)
+  const sorted = [...demo].sort((a, b) => Number(rv.has(a.id)) - Number(rv.has(b.id)) || order[a.summary.band] - order[b.summary.band] || b.summary.max_prob - a.summary.max_prob).filter((a) => f === 'all' || a.summary.band === f)
   return (
     <Screen title="Slides">
       <Segmented value={f} onChange={setF} options={[{ value: 'all', label: 'All' }, { value: 'likely positive', label: 'Positive' }, { value: 'unclear', label: 'Unclear' }, { value: 'likely negative', label: 'Negative' }]} />
-      <Group header="Triage queue" footer="Everything runs on this phone. No image leaves the device.">
+      <Group header="Triage queue" footer="Most urgent first; signed-off slides drop to the bottom. Everything runs on this phone. No image leaves the device.">
         {sorted.map((a) => (
           <button key={a.id} className="row tap" onClick={() => push(a.name, <SlideDetail a={a} />)}>
             <img className="thumb" src={a.url} alt="" />
-            <div className="grow"><b>{a.name}</b><div className="caption">{a.summary.cells} cells · {a.summary.flagged_positive} positive</div></div>
+            <div className="grow"><b>{a.name}</b><div className="caption">{a.summary.cells} cells · {a.summary.flagged_positive} look infected{rv.has(a.id) ? ` · ${VERDICT_LABEL[rv.get(a.id)!]}` : ''}</div></div>
             <Chip band={a.summary.band} /><Chevron />
           </button>
         ))}
@@ -158,10 +179,11 @@ function AccuracyScreen({ m }: { m: Card }) {
       <Segmented value={v} onChange={setV} options={[{ value: 'cells', label: 'Cells' }, { value: 'slides', label: 'Simulated slides' }]} />
       {v === 'cells' ? (
         <>
-          <div className="stat-row two"><Stat value={t.auc.toFixed(3)} label="AUC" /><Stat value={t.n_cells.toLocaleString()} label={`Cells · ${t.n_patients} patients`} /></div>
+          <p className="plain">Out of 100 infected cells it catches about {Math.round(t['at_0.5'].sensitivity * 100)}. Out of 100 healthy cells it wrongly flags about {Math.round((1 - t['at_0.5'].specificity) * 100)}.</p>
+          <div className="stat-row two"><Stat value={t.auc.toFixed(3)} label="AUC (1.0 is perfect)" /><Stat value={t.n_cells.toLocaleString()} label={`Cells · ${t.n_patients} patients`} /></div>
           <div className="stat-row two">
-            <Stat value={f1(t.at_t_low.sensitivity)} label="Rule-out sensitivity" tone="neg" /><Stat value={f1(t.at_t_low.specificity)} label="Rule-out specificity" />
-            <Stat value={f1(t.at_t_high.sensitivity)} label="Rule-in sensitivity" /><Stat value={f1(t.at_t_high.specificity)} label="Rule-in specificity" tone="pos" />
+            <Stat value={f1(t.at_t_low.sensitivity)} label="Catches infected (clearing)" tone="neg" /><Stat value={f1(t.at_t_low.specificity)} label="Keeps healthy (clearing)" />
+            <Stat value={f1(t.at_t_high.sensitivity)} label="Catches infected (flagging)" /><Stat value={f1(t.at_t_high.specificity)} label="Keeps healthy (flagging)" tone="pos" />
           </div>
           <p className="group-footer">Measured on cells from patients never seen in training.</p>
         </>
@@ -193,7 +215,7 @@ function StepsScreen() {
 }
 
 function LimitsScreen() {
-  const items = ['Research prototype, not a medical device.', 'Trained on one public thin-smear dataset; other stains and cameras may perform worse.', 'Estimates parasitemia from the cells found, not a full-slide count.', 'Species and parasite stage are not identified.', 'A lab scientist confirms every result.']
+  const items = ['Research prototype, not a medical device.', 'Trained on one public thin-smear dataset; other stains and cameras may perform worse.', 'Estimates the share of infected red cells from the cells found, not a full-slide count. One field cannot clear a slide: read several, as labs already do.', 'Species and parasite stage are not identified.', 'A lab scientist confirms every result.']
   return (
     <Screen title="Limits & Safety">
       <Group>{items.map((t) => <div className="row step top" key={t}><span className="bullet" /><span>{t}</span></div>)}</Group>

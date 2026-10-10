@@ -64,7 +64,7 @@ export function summarise(probs: number[], t: Thresholds): Summary {
   const n = probs.length
   const pos = probs.filter((p) => p >= t.t_high).length
   const unc = probs.filter((p) => p >= t.t_low && p < t.t_high).length
-  const band: Band = pos >= t.slide_k_pos ? 'likely positive' : pos + unc <= t.slide_k_neg ? 'likely negative' : 'unclear'
+  const band: Band = pos >= t.slide_k_pos ? 'likely positive' : probs.length >= 20 && pos + unc <= t.slide_k_neg ? 'likely negative' : 'unclear'
   return {
     cells: n,
     flagged_positive: pos,

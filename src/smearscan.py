@@ -86,6 +86,9 @@ class SmearScan:
         return cells, summarise(cells, self.t_low, self.t_high, self.k_pos, self.k_neg, self.fp_rate)
 
 
+MIN_CELLS = 20
+
+
 def summarise(cells, t_low, t_high, k_pos=1, k_neg=0, fp_rate=0.0):
     probs = np.array([c.prob for c in cells])
     n = len(probs)
@@ -93,9 +96,10 @@ def summarise(cells, t_low, t_high, k_pos=1, k_neg=0, fp_rate=0.0):
     unc = int(((probs >= t_low) & (probs < t_high)).sum())
     # Slide band from counts calibrated on validation slides (evaluate_slides.py).
     # A lab scientist reviews every slide; the band only sets queue order.
+    # Too few cells read (e.g. touching cells dropped by the segmenter) is never evidence of a negative.
     if pos >= k_pos:
         slide_band = "likely positive"
-    elif pos + unc <= k_neg:
+    elif n >= MIN_CELLS and pos + unc <= k_neg:
         slide_band = "likely negative"
     else:
         slide_band = "unclear"

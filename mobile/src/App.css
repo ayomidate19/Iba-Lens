@@ -98,3 +98,12 @@
 .computing { position: absolute; inset: auto 8px 8px 8px; display: flex; gap: 8px; justify-content: center; align-items: center; font-size: 13px; color: #fff; background: rgba(0,0,0,.5); border-radius: 8px; padding: 4px; }
 @keyframes fade { from { opacity: 0; } }
 @keyframes up { from { transform: translateY(100%); } }
+
+.notice { margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px; font-size: 15px; line-height: 20px; background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); font-weight: 500; }
+.plain { margin: 8px 16px 12px; font-size: 15px; line-height: 21px; opacity: .75; }
+.signoff { display: grid; gap: 8px; padding: 12px; }
+.vbtn { min-height: 46px; border-radius: 12px; font-size: 16px; font-weight: 600; background: color-mix(in srgb, var(--blue) 12%, transparent); color: var(--blue); }
+.vbtn.positive { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+.vbtn.negative { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.vbtn.repeat { background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); }
+.vbtn.on { color: #fff; background: var(--blue); } .vbtn.positive.on { background: var(--red); } .vbtn.negative.on { background: var(--green); } .vbtn.repeat.on { background: var(--amber); }
