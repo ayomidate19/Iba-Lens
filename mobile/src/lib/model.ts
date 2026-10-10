@@ -106,11 +106,22 @@ export async function occlusion(crop: Uint8Array, base_p: number, patch = 24, st
       cnt[y * SIZE + x]++
     }
   })
-  let mx = 0
-  for (let i = 0; i < map.length; i++) {
-    map[i] = cnt[i] ? map[i] / cnt[i] : 0
-    if (map[i] > mx) mx = map[i]
+  for (let i = 0; i < map.length; i++) map[i] = cnt[i] ? map[i] / cnt[i] : 0
+  // soften block edges: two box-blur passes
+  const tmp = new Float32Array(map.length)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
+      let s = 0, n = 0
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const yy = y + dy, xx = x + dx
+        if (yy >= 0 && yy < SIZE && xx >= 0 && xx < SIZE) { s += map[yy * SIZE + xx]; n++ }
+      }
+      tmp[y * SIZE + x] = s / n
+    }
+    map.set(tmp)
   }
+  let mx = 0
+  for (let i = 0; i < map.length; i++) if (map[i] > mx) mx = map[i]
   if (mx > 0) for (let i = 0; i < map.length; i++) map[i] /= mx
   return map
 }

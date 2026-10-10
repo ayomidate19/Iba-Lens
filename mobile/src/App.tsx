@@ -1,202 +1,239 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { analyse, type Analysis, type Cell } from './analyse'
-import { occlusion } from './lib/model'
-import { SIZE } from './lib/segment'
 import type { Band } from './lib/model'
+import { Screen, Segmented, Stack, useNav } from './nav'
+import { CellCanvas, CellSheet, Chevron, Chip, Group, Stat, bandClass, pct } from './ui'
 import './App.css'
 
 const base = import.meta.env.BASE_URL
 const DEMO_IDS = ['LAB-0412', 'LAB-0413', 'LAB-0414', 'LAB-0415', 'LAB-0416', 'LAB-0417', 'LAB-0418', 'LAB-0419']
 type Tab = 'slides' | 'scan' | 'model'
 
-const bandClass = (b: Band) => (b === 'likely positive' ? 'pos' : b === 'unclear' ? 'unc' : 'neg')
-const Chip = ({ band }: { band: Band }) => <span className={`chip ${bandClass(band)}`}>{band.replace('likely ', '')}</span>
-const pct = (n: number) => (n < 10 ? n.toFixed(1) : n.toFixed(0)) + '%'
+/* ───────── Slide flow: queue → detail → field / flagged cells → evidence sheet ───────── */
 
-function CellCanvas({ crop, heat, className }: { crop: Uint8Array; heat?: Float32Array | null; className?: string }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => {
-    const ctx = ref.current!.getContext('2d')!
-    const im = ctx.createImageData(SIZE, SIZE)
-    for (let i = 0; i < SIZE * SIZE; i++) {
-      let r = crop[i * 3], g = crop[i * 3 + 1], b = crop[i * 3 + 2]
-      const fg = r + g + b > 30
-      if (!fg) { r = g = b = 28 }
-      if (heat && fg) {
-        const h = heat[i]
-        const a = Math.min(0.85, h * 0.9)
-        r = r * (1 - a) + 255 * a
-        g = g * (1 - a) + (69 + 120 * (1 - h)) * a
-        b = b * (1 - a) + 58 * a
-      }
-      im.data.set([r, g, b, 255], i * 4)
-    }
-    ctx.putImageData(im, 0, 0)
-  }, [crop, heat])
-  return <canvas ref={ref} width={SIZE} height={SIZE} className={className} />
-}
-
-function Sheet({ cell, onClose }: { cell: Cell; onClose: () => void }) {
-  const [heat, setHeat] = useState<Float32Array | null>(null)
-  const [showHeat, setShowHeat] = useState(true)
-  useEffect(() => {
-    let live = true
-    setHeat(null)
-    occlusion(cell.crop, cell.prob).then((h) => live && setHeat(h))
-    return () => { live = false }
-  }, [cell])
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="grab" />
-        <div className="sheet-head">
-          <h3>Cell evidence</h3>
-          <button className="link" onClick={onClose}>Done</button>
-        </div>
-        <CellCanvas crop={cell.crop} heat={showHeat ? heat : null} className="big-cell" />
-        <div className="center"><Chip band={cell.band} /></div>
-        <div className="group">
-          <div className="row"><span>Parasite probability</span><b>{(cell.prob * 100).toFixed(1)}%</b></div>
-          <div className="row">
-            <span>Show attention heatmap</span>
-            <label className="switch"><input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} /><i /></label>
-          </div>
-        </div>
-        <p className="foot">{heat ? 'Red areas are where hiding the pixels most lowers the score — computed on this phone by occlusion.' : 'Computing heatmap on device…'}</p>
-      </div>
-    </div>
-  )
-}
-
-function Detail({ a, onBack }: { a: Analysis; onBack: () => void }) {
+function FieldScreen({ a }: { a: Analysis }) {
   const [sel, setSel] = useState<Cell | null>(null)
-  const flagged = useMemo(() => a.cells.filter((c) => c.band !== 'likely negative').sort((x, y) => y.prob - x.prob), [a])
-  const s = a.summary
   return (
-    <div className="page">
-      <header className="navbar"><button className="back" onClick={onBack}>‹ Slides</button><span className="nav-title">{a.name}</span></header>
-      <h1 className="large">{a.name}</h1>
-      <div className="hero">
-        <Chip band={s.band} />
-        <div className="big-num">{pct(s.parasitemia_pct)}</div>
-        <div className="muted">estimated parasitemia · {s.cells} cells scanned</div>
-      </div>
-      <div className="group">
-        <div className="row"><span>Likely positive cells</span><b>{s.flagged_positive}</b></div>
-        <div className="row"><span>Unclear cells</span><b>{s.flagged_unclear}</b></div>
-        <div className="row"><span>Upper estimate</span><b>{pct(s.parasitemia_upper_pct)}</b></div>
-      </div>
-      <p className="section">Field</p>
+    <Screen title="Field">
       <div className="field">
-        <img src={a.url} alt={a.name} />
+        <img src={a.url} alt={`Field image of ${a.name}`} />
         <svg viewBox={`0 0 ${a.width} ${a.height}`} preserveAspectRatio="none">
           {a.cells.map((c, i) => c.band !== 'likely negative' && (
-            <rect key={i} x={c.bbox[1]} y={c.bbox[0]} width={c.bbox[3] - c.bbox[1]} height={c.bbox[2] - c.bbox[0]} rx={10}
-              className={`box ${bandClass(c.band)}`} onClick={() => setSel(c)} />
+            <rect key={i} x={c.bbox[1]} y={c.bbox[0]} width={c.bbox[3] - c.bbox[1]} height={c.bbox[2] - c.bbox[0]} rx={10} className={`box ${bandClass(c.band)}`} onClick={() => setSel(c)} />
           ))}
         </svg>
       </div>
-      <p className="section">Flagged cells · tap for evidence</p>
-      {flagged.length ? (
+      <div className="legend"><span><i className="dot pos" />Positive</span><span><i className="dot unc" />Unclear</span></div>
+      <p className="group-footer">Tap a boxed cell to see the evidence.</p>
+      {sel && <CellSheet cell={sel} onClose={() => setSel(null)} />}
+    </Screen>
+  )
+}
+
+function FlaggedScreen({ a }: { a: Analysis }) {
+  const [sel, setSel] = useState<Cell | null>(null)
+  const pos = useMemo(() => a.cells.filter((c) => c.band === 'likely positive').sort((x, y) => y.prob - x.prob), [a])
+  const unc = useMemo(() => a.cells.filter((c) => c.band === 'unclear').sort((x, y) => y.prob - x.prob), [a])
+  const [which, setWhich] = useState<'pos' | 'unc'>(pos.length || !unc.length ? 'pos' : 'unc')
+  const list = which === 'pos' ? pos : unc
+  return (
+    <Screen title="Flagged Cells">
+      <Segmented value={which} onChange={setWhich} options={[{ value: 'pos', label: `Positive (${pos.length})` }, { value: 'unc', label: `Unclear (${unc.length})` }]} />
+      {list.length ? (
         <div className="grid">
-          {flagged.map((c, i) => (
-            <button key={i} className={`tile ${bandClass(c.band)}`} onClick={() => setSel(c)}>
+          {list.map((c, i) => (
+            <button key={i} className={`tile ${bandClass(c.band)}`} onClick={() => setSel(c)} aria-label={`Cell, ${(c.prob * 100).toFixed(0)} percent`}>
               <CellCanvas crop={c.crop} /><span>{(c.prob * 100).toFixed(0)}%</span>
             </button>
           ))}
         </div>
-      ) : <div className="group"><div className="row muted">No cells flagged.</div></div>}
-      <p className="foot">Decision support only. A lab scientist confirms every result.</p>
-      {sel && <Sheet cell={sel} onClose={() => setSel(null)} />}
-    </div>
+      ) : <Group><div className="row empty">No cells in this group.</div></Group>}
+      <p className="group-footer">Sorted by probability. Tap a cell for its heatmap.</p>
+      {sel && <CellSheet cell={sel} onClose={() => setSel(null)} />}
+    </Screen>
   )
 }
 
-function SlidesTab({ items, open }: { items: Analysis[]; open: (a: Analysis) => void }) {
-  const order = { 'likely positive': 0, unclear: 1, 'likely negative': 2 }
-  const sorted = [...items].sort((a, b) => order[a.summary.band] - order[b.summary.band] || b.summary.max_prob - a.summary.max_prob)
-  const pending = DEMO_IDS.length - items.filter((i) => i.source === 'demo').length
+function SlideDetail({ a }: { a: Analysis }) {
+  const { push } = useNav()
+  const s = a.summary
   return (
-    <div className="page">
-      <h1 className="large">Slides</h1>
-      <p className="sub">Triage queue · most urgent first</p>
-      <div className="group">
+    <Screen title={a.name}>
+      <div className="card hero">
+        <Chip band={s.band} />
+        <div className="big-num">{pct(s.parasitemia_pct)}</div>
+        <div className="caption">Estimated parasitemia · {s.cells} cells scanned</div>
+      </div>
+      <div className="stat-row">
+        <Stat value={String(s.flagged_positive)} label="Positive" tone="pos" />
+        <Stat value={String(s.flagged_unclear)} label="Unclear" tone="unc" />
+        <Stat value={pct(s.parasitemia_upper_pct)} label="Upper est." />
+      </div>
+      <Group header="Review">
+        <button className="row tap" onClick={() => push('Field', <FieldScreen a={a} />)}>
+          <img className="thumb" src={a.url} alt="" />
+          <div className="grow"><b>Field image</b><div className="caption">Boxes mark flagged cells</div></div><Chevron />
+        </button>
+        <button className="row tap" onClick={() => push('Flagged Cells', <FlaggedScreen a={a} />)}>
+          <div className="grow"><b>Flagged cells</b><div className="caption">With on-device heatmaps</div></div>
+          <span className="value">{s.flagged_positive + s.flagged_unclear}</span><Chevron />
+        </button>
+      </Group>
+      <p className="group-footer">Decision support only. A lab scientist confirms every result.</p>
+    </Screen>
+  )
+}
+
+const order: Record<Band, number> = { 'likely positive': 0, unclear: 1, 'likely negative': 2 }
+function SlidesRoot({ items }: { items: Analysis[] }) {
+  const { push } = useNav()
+  const [f, setF] = useState<'all' | Band>('all')
+  const demo = items.filter((i) => i.source === 'demo')
+  const pending = DEMO_IDS.length - demo.length
+  const sorted = [...demo].sort((a, b) => order[a.summary.band] - order[b.summary.band] || b.summary.max_prob - a.summary.max_prob).filter((a) => f === 'all' || a.summary.band === f)
+  return (
+    <Screen title="Slides">
+      <Segmented value={f} onChange={setF} options={[{ value: 'all', label: 'All' }, { value: 'likely positive', label: 'Positive' }, { value: 'unclear', label: 'Unclear' }, { value: 'likely negative', label: 'Negative' }]} />
+      <Group header="Triage queue" footer="Everything runs on this phone. No image leaves the device.">
         {sorted.map((a) => (
-          <button key={a.id} className="row tap" onClick={() => open(a)}>
+          <button key={a.id} className="row tap" onClick={() => push(a.name, <SlideDetail a={a} />)}>
             <img className="thumb" src={a.url} alt="" />
-            <div className="grow"><b>{a.name}</b><div className="muted">{a.summary.cells} cells · {a.summary.flagged_positive} positive · {a.summary.flagged_unclear} unclear</div></div>
-            <Chip band={a.summary.band} /><span className="chev">›</span>
+            <div className="grow"><b>{a.name}</b><div className="caption">{a.summary.cells} cells · {a.summary.flagged_positive} positive</div></div>
+            <Chip band={a.summary.band} /><Chevron />
           </button>
         ))}
-        {pending > 0 && <div className="row muted"><span className="spinner" />Analysing {pending} slide{pending > 1 ? 's' : ''} on device…</div>}
-      </div>
-      <p className="foot">Everything runs on this phone. No image leaves the device.</p>
-    </div>
+        {pending > 0 && <div className="row empty"><span className="spinner" />Analysing {pending} slide{pending > 1 ? 's' : ''}…</div>}
+        {!pending && !sorted.length && <div className="row empty">No slides in this group.</div>}
+      </Group>
+    </Screen>
   )
 }
 
-function ScanTab({ onFile, busy, error }: { onFile: (f: File) => void; busy: boolean; error: string | null }) {
+/* ───────── Scan flow: capture → result ───────── */
+
+function ScanRoot({ items, onFile, busy, error }: { items: Analysis[]; onFile: (f: File) => void; busy: boolean; error: string | null }) {
+  const { push } = useNav()
   const cam = useRef<HTMLInputElement>(null)
   const lib = useRef<HTMLInputElement>(null)
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }
+  const scans = items.filter((i) => i.source === 'scan')
+  const steps = ['Place the slide under the microscope and focus on the thin smear.', 'Hold the phone to the eyepiece so cells fill the frame.', 'Take a photo. Analysis runs on this phone.']
   return (
-    <div className="page">
-      <h1 className="large">Scan</h1>
-      <p className="sub">Photograph a blood smear through the microscope eyepiece.</p>
-      <div className="viewfinder"><div className="reticle" /></div>
-      <button className="primary" disabled={busy} onClick={() => cam.current?.click()}>{busy ? 'Analysing…' : 'Scan slide'}</button>
-      <button className="secondary" disabled={busy} onClick={() => lib.current?.click()}>Choose from Photos</button>
+    <Screen title="Scan">
+      <Group header="How to scan">
+        {steps.map((t, i) => (<div className="row step" key={i}><span className="num">{i + 1}</span><span>{t}</span></div>))}
+      </Group>
+      <div className="actions">
+        <button className="primary" disabled={busy} onClick={() => cam.current?.click()}>{busy ? <><span className="spinner light" /> Analysing…</> : 'Take Photo'}</button>
+        <button className="secondary" disabled={busy} onClick={() => lib.current?.click()}>Choose from Library</button>
+      </div>
+      {error && <p className="group-footer err" role="alert">{error}</p>}
       <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={pick} />
       <input ref={lib} type="file" accept="image/*" hidden onChange={pick} />
-      {error && <p className="foot err">{error}</p>}
-      <p className="foot">Works offline. The model and cell detector run on this device.</p>
-    </div>
+      {scans.length > 0 && (
+        <Group header="Recent scans">
+          {scans.map((a) => (
+            <button key={a.id} className="row tap" onClick={() => push(a.name, <SlideDetail a={a} />)}>
+              <img className="thumb" src={a.url} alt="" />
+              <div className="grow"><b>{a.name}</b><div className="caption">{a.summary.cells} cells</div></div><Chip band={a.summary.band} /><Chevron />
+            </button>
+          ))}
+        </Group>
+      )}
+      <p className="group-footer">Works offline. The model and cell detector run on this device.</p>
+    </Screen>
   )
 }
 
-interface Card { metrics: { val_auc: number; test: Record<string, any> }; slides: { by_level: Record<string, any> } }
-function ModelTab() {
+/* ───────── Model flow ───────── */
+
+interface Card { metrics: { test: Record<string, any> }; slides: { by_level: Record<string, any>; setup: string } }
+const f1 = (x: number) => (x * 100).toFixed(1) + '%'
+
+function AccuracyScreen({ m }: { m: Card }) {
+  const t = m.metrics.test
+  const [v, setV] = useState<'cells' | 'slides'>('cells')
+  return (
+    <Screen title="Accuracy">
+      <Segmented value={v} onChange={setV} options={[{ value: 'cells', label: 'Cells' }, { value: 'slides', label: 'Simulated slides' }]} />
+      {v === 'cells' ? (
+        <>
+          <div className="stat-row two"><Stat value={t.auc.toFixed(3)} label="AUC" /><Stat value={t.n_cells.toLocaleString()} label={`Cells · ${t.n_patients} patients`} /></div>
+          <div className="stat-row two">
+            <Stat value={f1(t.at_t_low.sensitivity)} label="Rule-out sensitivity" tone="neg" /><Stat value={f1(t.at_t_low.specificity)} label="Rule-out specificity" />
+            <Stat value={f1(t.at_t_high.sensitivity)} label="Rule-in sensitivity" /><Stat value={f1(t.at_t_high.specificity)} label="Rule-in specificity" tone="pos" />
+          </div>
+          <p className="group-footer">Measured on cells from patients never seen in training.</p>
+        </>
+      ) : (
+        <Group header="True parasitemia → result" footer={m.slides.setup}>
+          {Object.entries(m.slides.by_level).map(([lvl, s]: [string, any]) => (
+            <div className="row between" key={lvl}><div><b>{lvl}</b><div className="caption">estimated {s.est_pct_mean.toFixed(1)}%</div></div><span className="value">{s.likely_positive}/{s.slides} positive</span></div>
+          ))}
+        </Group>
+      )}
+    </Screen>
+  )
+}
+
+function StepsScreen() {
+  const steps: [string, string][] = [
+    ['Find cells', 'The photo is thresholded (Otsu), cleaned, and split into single red blood cells.'],
+    ['Classify each cell', 'A 9 MB MobileNetV2 scores each 96 px cell for parasites using ONNX Runtime.'],
+    ['Set the triage band', 'Calibrated thresholds turn scores into positive, unclear, or negative, for the cell and the slide.'],
+    ['Show the evidence', 'Occlusion sensitivity highlights the pixels that drove a cell’s score.'],
+  ]
+  return (
+    <Screen title="How It Works">
+      <Group footer="Every step runs on this device. Nothing is uploaded.">
+        {steps.map(([h, b], i) => (<div className="row step top" key={h}><span className="num">{i + 1}</span><div><b>{h}</b><div className="caption body">{b}</div></div></div>))}
+      </Group>
+    </Screen>
+  )
+}
+
+function LimitsScreen() {
+  const items = ['Research prototype, not a medical device.', 'Trained on one public thin-smear dataset; other stains and cameras may perform worse.', 'Estimates parasitemia from the cells found, not a full-slide count.', 'Species and parasite stage are not identified.', 'A lab scientist confirms every result.']
+  return (
+    <Screen title="Limits & Safety">
+      <Group>{items.map((t) => <div className="row step top" key={t}><span className="bullet" /><span>{t}</span></div>)}</Group>
+    </Screen>
+  )
+}
+
+function ModelRoot() {
+  const { push } = useNav()
   const [m, setM] = useState<Card | null>(null)
   useEffect(() => { fetch(base + 'model/model_card.json').then((r) => r.json()).then(setM) }, [])
-  const t = m?.metrics.test
-  const f = (x: number) => (x * 100).toFixed(1) + '%'
+  const Icon = ({ c, d }: { c: string; d: string }) => (<span className="icon-sq" style={{ background: c }}><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg></span>)
   return (
-    <div className="page">
-      <h1 className="large">Model</h1>
-      <p className="sub">MobileNetV2 · 9 MB · ONNX Runtime on device</p>
-      {t && <>
-        <p className="section">Held-out patients · {t.n_cells.toLocaleString()} cells · {t.n_patients} patients</p>
-        <div className="group">
-          <div className="row"><span>AUC</span><b>{t.auc.toFixed(3)}</b></div>
-          <div className="row"><span>Rule-out sensitivity</span><b>{f(t.at_t_low.sensitivity)}</b></div>
-          <div className="row"><span>Rule-out specificity</span><b>{f(t.at_t_low.specificity)}</b></div>
-          <div className="row"><span>Rule-in sensitivity</span><b>{f(t.at_t_high.sensitivity)}</b></div>
-          <div className="row"><span>Rule-in specificity</span><b>{f(t.at_t_high.specificity)}</b></div>
-        </div>
-        <p className="section">Simulated 100-cell fields</p>
-        <div className="group">
-          {Object.entries(m!.slides.by_level).map(([lvl, v]: [string, any]) => (
-            <div className="row" key={lvl}><span>{lvl} true parasitemia</span><b>{v.est_pct_mean.toFixed(1)}% est · {v.likely_positive}/{v.slides} positive</b></div>
-          ))}
-        </div>
-      </>}
-      <p className="foot">Trained on the public NIH thin-smear cell dataset. Research prototype, not a medical device. A lab scientist confirms every result.</p>
-    </div>
+    <Screen title="Model">
+      <div className="card hero left"><b>MobileNetV2</b><div className="caption">9 MB · ONNX Runtime · runs on device</div></div>
+      <Group>
+        <button className="row tap" disabled={!m} onClick={() => m && push('Accuracy', <AccuracyScreen m={m} />)}><Icon c="#34c759" d="M4 19V9M10 19V5M16 19v-7M22 19H2" /><span className="grow">Accuracy</span><Chevron /></button>
+        <button className="row tap" onClick={() => push('How It Works', <StepsScreen />)}><Icon c="#007aff" d="M5 12h14M13 6l6 6-6 6" /><span className="grow">How It Works</span><Chevron /></button>
+        <button className="row tap" onClick={() => push('Limits & Safety', <LimitsScreen />)}><Icon c="#ff9500" d="M12 8v5M12 17h.01M10.3 4l-8 14a2 2 0 001.7 3h16a2 2 0 001.7-3l-8-14a2 2 0 00-3.4 0z" /><span className="grow">Limits &amp; Safety</span><Chevron /></button>
+      </Group>
+      <p className="group-footer">Trained on the public NIH thin-smear cell dataset. A lab scientist confirms every result.</p>
+    </Screen>
   )
 }
 
+/* ───────── Shell ───────── */
+
 const icons: Record<Tab, string> = {
-  slides: 'M4 6h16M4 12h16M4 18h16',
-  scan: 'M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M12 9a3 3 0 100 6 3 3 0 000-6',
+  slides: 'M8 6h12M8 12h12M8 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+  scan: 'M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2M12 9a3 3 0 100 6 3 3 0 000-6',
   model: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5',
 }
+const TABS: Tab[] = ['slides', 'scan', 'model']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('slides')
   const [items, setItems] = useState<Analysis[]>([])
-  const [open, setOpen] = useState<Analysis | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pushScan, setPushScan] = useState<{ a: Analysis; n: number } | null>(null)
 
   useEffect(() => {
     let live = true
@@ -216,31 +253,43 @@ export default function App() {
     setBusy(true); setError(null)
     try {
       const n = items.filter((i) => i.source === 'scan').length + 1
-      const a = await analyse(`SCAN-${n}`, `Scan ${n}`, URL.createObjectURL(f), 'scan')
+      const a = await analyse(`Scan ${n}`, `Scan ${n}`, URL.createObjectURL(f), 'scan')
       if (!a.cells.length) throw new Error('No cells found. Move closer and make sure the smear fills the frame.')
-      setItems((x) => [a, ...x]); setOpen(a)
+      setItems((x) => [a, ...x]); setPushScan({ a, n })
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) }
     setBusy(false)
   }, [items])
 
   return (
     <div className="app">
-      <main>
-        {open ? <Detail a={open} onBack={() => setOpen(null)} />
-          : tab === 'slides' ? <SlidesTab items={items} open={setOpen} />
-          : tab === 'scan' ? <ScanTab onFile={onFile} busy={busy} error={error} />
-          : <ModelTab />}
-      </main>
-      {!open && (
-        <nav className="tabbar">
-          {(['slides', 'scan', 'model'] as Tab[]).map((t) => (
-            <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icons[t]} /></svg>
-              <span>{t[0].toUpperCase() + t.slice(1)}</span>
-            </button>
-          ))}
-        </nav>
-      )}
+      <div className="content">
+        <Stack rootTitle="Slides" active={tab === 'slides'} root={<SlidesRoot items={items} />} key="s" />
+        <ScanStack active={tab === 'scan'} items={items} onFile={onFile} busy={busy} error={error} pushed={pushScan} />
+        <Stack rootTitle="Model" active={tab === 'model'} root={<ModelRoot />} key="m" />
+      </div>
+      <nav className="tabbar" aria-label="Tabs">
+        {TABS.map((t) => (
+          <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)} aria-current={tab === t}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={tab === t ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round"><path d={icons[t]} /></svg>
+            <span>{t[0].toUpperCase() + t.slice(1)}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
+}
+
+// Scan stack needs live props in its root and a way to push a result when analysis finishes.
+function ScanStack({ active, items, onFile, busy, error, pushed }: { active: boolean; items: Analysis[]; onFile: (f: File) => void; busy: boolean; error: string | null; pushed: { a: Analysis; n: number } | null }) {
+  return (
+    <Stack rootTitle="Scan" active={active} root={<ScanRootLive items={items} onFile={onFile} busy={busy} error={error} pushed={pushed} />} />
+  )
+}
+function ScanRootLive(p: { items: Analysis[]; onFile: (f: File) => void; busy: boolean; error: string | null; pushed: { a: Analysis; n: number } | null }) {
+  const { push } = useNav()
+  const last = useRef<number>(0)
+  useEffect(() => {
+    if (p.pushed && p.pushed.n !== last.current) { last.current = p.pushed.n; push(p.pushed.a.name, <SlideDetail a={p.pushed.a} />) }
+  }, [p.pushed, push])
+  return <ScanRoot items={p.items} onFile={p.onFile} busy={p.busy} error={p.error} />
 }

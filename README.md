@@ -24,6 +24,18 @@ ForgeHacks 2026 · AI + Healthcare track
 - [ ] Public demo video, 2–4 min
 - [ ] Deployment link
 
+## Mobile app (iOS, on-device)
+
+`mobile/` is an iOS-style app (React + TypeScript, ONNX Runtime Web, Capacitor) that runs cell detection and the model on the phone, offline. See [mobile/README.md](mobile/README.md).
+
+| Slides | Slide detail | Flagged cells | Cell evidence |
+|---|---|---|---|
+| ![](docs/mobile/01-slides.png) | ![](docs/mobile/02-detail.png) | ![](docs/mobile/03-flagged.png) | ![](docs/mobile/04-evidence-sheet.png) |
+
+| Field | Scan | Scan result | Model | Accuracy | Dark mode |
+|---|---|---|---|---|---|
+| ![](docs/mobile/05-field.png) | ![](docs/mobile/06-scan.png) | ![](docs/mobile/07-scan-result.png) | ![](docs/mobile/08-model.png) | ![](docs/mobile/10-accuracy.png) | ![](docs/mobile/11-dark-sheet.png) |
+
 ## The problem
 
 Nigeria carries the world's largest malaria burden: about 26% of global cases and 31% of global malaria deaths in 2023 ([World Malaria Report 2024 via ICIR](https://www.icirnigeria.org/nigeria-still-carries-worlds-highest-malaria-burden/)). WHO says every suspected case should be confirmed by microscopy or an RDT before treatment ([WHO](https://www.who.int/news-room/fact-sheets/detail/malaria)). In practice that confirmation is often skipped or late:
