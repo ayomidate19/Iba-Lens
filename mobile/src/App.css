@@ -64,3 +64,4 @@
 @keyframes fade { from { opacity: 0; } }
 @keyframes up { from { transform: translateY(100%); } }
 .row .spinner + * , .row:has(.spinner) { justify-content: center; }
+.page:has(.navbar) { padding-top: 0; }
